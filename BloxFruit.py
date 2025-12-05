@@ -68,3 +68,4 @@ if st.session_state.fruit:
 
     if st.button("⚔️ Start Battle") and st.session_state.enemy_hp is No
 
+streamlit run app.py
