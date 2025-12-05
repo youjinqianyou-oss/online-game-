@@ -1,39 +1,26 @@
-import streamlit as st
 import random
 
-st.set_page_config(page_title="Blox Fruits Mini Game")
-st.title("⚔️ Blox Fruits Mini Game")
-st.write("Draw a fruit ➜ Fight enemies ➜ Earn points!")
+print("=== 寶物大冒險！===")
+print("你在一個 5 x 5 的地圖中，要找到隱藏的寶物！")
 
-# Game data
-fruits = {
-    "Dragon": {"power": 95},
-    "Dough": {"power": 90},
-    "Light": {"power": 80},
-    "Ice": {"power": 70},
-    "Smoke": {"power": 50},
-}
+treasure_x = random.randint(1, 5)
+treasure_y = random.randint(1, 5)
 
-enemies = {
-    "Marine Soldier": 40,
-    "Bandit": 50,
-    "Snow Monster": 60,
-    "Desert Officer": 70,
-    "Boss: Shadow Samurai": 90,
-}
+while True:
+    try:
+        x = int(input("請猜寶物的 X 座標 (1-5): "))
+        y = int(input("請猜寶物的 Y 座標 (1-5): "))
+    except ValueError:
+        print("請輸入數字！")
+        continue
 
-# Initialize session state
-if "fruit" not in st.session_state:
-    st.session_state.fruit = None
-if "score" not in st.session_state:
-    st.session_state.score = 0
+    if x < 1 or x > 5 or y < 1 or y > 5:
+        print("超出地圖範圍！再試一次～")
+        continue
 
-st.markdown("### 1️⃣ Draw a Fruit")
+    if x == treasure_x and y == treasure_y:
+        print("🎉你找到寶物了！恭喜通關！🎉")
+        break
+    else:
 
-if st.button("🔮 Random Fruit!"):
-    st.session_state.fruit = random.choice(list(fruits.keys()))
-    st.success(f"You got: **{st.session_state.fruit}**!🔥")
-
-if st.session_state.fruit:
-    fruit_power = fruits[st.session_state._]()_
 
