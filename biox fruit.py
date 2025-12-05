@@ -1,26 +1,27 @@
 import random
 
-print("=== 寶物大冒險！===")
-print("你在一個 5 x 5 的地圖中，要找到隱藏的寶物！")
+print("=== Treasure Adventure! ===")
+print("Find the hidden treasure in a 5 x 5 map!")
 
 treasure_x = random.randint(1, 5)
 treasure_y = random.randint(1, 5)
 
 while True:
     try:
-        x = int(input("請猜寶物的 X 座標 (1-5): "))
-        y = int(input("請猜寶物的 Y 座標 (1-5): "))
+        x = int(input("Guess the X coordinate (1-5): "))
+        y = int(input("Guess the Y coordinate (1-5): "))
     except ValueError:
-        print("請輸入數字！")
+        print("Please enter a number!")
         continue
 
     if x < 1 or x > 5 or y < 1 or y > 5:
-        print("超出地圖範圍！再試一次～")
+        print("Out of the map! Try again.")
         continue
 
     if x == treasure_x and y == treasure_y:
-        print("🎉你找到寶物了！恭喜通關！🎉")
+        print("🎉 You found the treasure! Congratulations! 🎉")
         break
     else:
-
+        distance = abs(x - treasure_x) + abs(y - treasure_y)
+        print(f"No treasure here! Hint:
 
