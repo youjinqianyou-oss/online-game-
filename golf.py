@@ -6,21 +6,48 @@ html_code = """
 <style>
   body { margin: 0; overflow: hidden; }
   canvas { background: #3A8F3A; display: block; margin: auto; }
+
+  /* Power Bar */
+  #powerBarContainer {
+    position: absolute;
+    left: 20px;
+    top: 100px;
+    width: 20px;
+    height: 200px;
+    background: rgba(255,255,255,0.2);
+    border: 2px solid white;
+    border-radius: 10px;
+    overflow: hidden;
+  }
+
+  #powerBarFill {
+    width: 100%;
+    height: 0%;
+    background: red;
+    transition: height 0.05s;
+  }
 </style>
+
+<div id="powerBarContainer">
+  <div id="powerBarFill"></div>
+</div>
 
 <canvas id="game" width="900" height="500"></canvas>
 
 <script>
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
+const powerBarFill = document.getElementById("powerBarFill");
 
 // Game state
 let ball = {x:150, y:400, vx:0, vy:0, r:10};
 let hole = {x:700, y:200, r:18};
 let score = 0;
 let level = 1;
+
 let dragging = false;
 let dragStart = null;
+let power = 0;
 
 let obstacles = [
   {x:300, y:150, w:80, h:200},
@@ -40,11 +67,13 @@ function randomObstacles() {
   }
 }
 
-// Drag controls — mouse + touch
+// Touch + Mouse
 function getPos(evt) {
   if (evt.touches) {
-    return {x: evt.touches[0].clientX - canvas.offsetLeft,
-            y: evt.touches[0].clientY - canvas.offsetTop};
+    return {
+      x: evt.touches[0].clientX - canvas.offsetLeft,
+      y: evt.touches[0].clientY - canvas.offsetTop
+    };
   }
   return {x: evt.offsetX, y: evt.offsetY};
 }
@@ -53,34 +82,65 @@ canvas.addEventListener("mousedown", e => {
   dragging = true;
   dragStart = getPos(e);
 });
+
+canvas.addEventListener("mousemove", e => {
+  if (dragging) {
+    let pos = getPos(e);
+    let dx = dragStart.x - pos.x;
+    let dy = dragStart.y - pos.y;
+    power = Math.min(100, Math.sqrt(dx*dx + dy*dy));
+    powerBarFill.style.height = power + "%";
+  }
+});
+
 canvas.addEventListener("mouseup", e => {
   if (!dragging) return;
   let pos = getPos(e);
-  ball.vx = (dragStart.x - pos.x) * 0.2;
-  ball.vy = (dragStart.y - pos.y) * 0.2;
+
+  let dx = dragStart.x - pos.x;
+  let dy = dragStart.y - pos.y;
+
+  ball.vx = dx * 0.2;
+  ball.vy = dy * 0.2;
+
+  power = 0;
+  powerBarFill.style.height = "0%";
+
   dragging = false;
 });
 
+// Touch events
 canvas.addEventListener("touchstart", e => {
   dragging = true;
   dragStart = getPos(e);
 });
-canvas.addEventListener("touchend", e => {
-  if (!dragging) return;
-  dragging = false;
+
+canvas.addEventListener("touchmove", e => {
+  if (dragging) {
+    let pos = getPos(e);
+    let dx = dragStart.x - pos.x;
+    let dy = dragStart.y - pos.y;
+    power = Math.min(100, Math.sqrt(dx*dx + dy*dy));
+    powerBarFill.style.height = power + "%";
+  }
 });
 
-// Physics + drawing loop
+canvas.addEventListener("touchend", e => {
+  dragging = false;
+  power = 0;
+  powerBarFill.style.height = "0%";
+});
+
+// Physics loop
 function loop() {
   ctx.clearRect(0,0,900,500);
 
-  // Update velocity
   ball.x += ball.vx;
   ball.y += ball.vy;
+
   ball.vx *= 0.97;
   ball.vy *= 0.97;
 
-  // Walls
   if (ball.x < ball.r || ball.x > 900 - ball.r) ball.vx *= -0.7;
   if (ball.y < ball.r || ball.y > 500 - ball.r) ball.vy *= -0.7;
 
@@ -124,9 +184,7 @@ function loop() {
 
   // Draw obstacles
   ctx.fillStyle = "#4b2e05";
-  obstacles.forEach(o => {
-    ctx.fillRect(o.x, o.y, o.w, o.h);
-  });
+  obstacles.forEach(o => ctx.fillRect(o.x, o.y, o.w, o.h));
 
   // Draw ball
   ctx.fillStyle = "white";
@@ -134,7 +192,7 @@ function loop() {
   ctx.arc(ball.x, ball.y, ball.r, 0, Math.PI*2);
   ctx.fill();
 
-  // HUD (not instructions)
+  // HUD (no instructions)
   ctx.fillStyle = "white";
   ctx.font = "22px Arial";
   ctx.fillText("Level: " + level, 10, 25);
