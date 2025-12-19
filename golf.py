@@ -3,233 +3,233 @@ st.set_page_config(layout="wide")
 import streamlit.components.v1 as components
 
 html_code = """
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+
 <style>
-  body { margin: 0; overflow: hidden; }
-  canvas { background: #3A8F3A; display: block; margin: auto; }
+html, body {
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  background: #2f6f2f;
+  touch-action: none;
+}
 
-  /* Power Bar */
-  #powerBarContainer {
-    position: absolute;
-    left: 20px;
-    top: 100px;
-    width: 20px;
-    height: 200px;
-    background: rgba(255,255,255,0.2);
-    border: 2px solid white;
-    border-radius: 10px;
-    overflow: hidden;
-  }
+#gameWrap {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+}
 
-  #powerBarFill {
-    width: 100%;
-    height: 0%;
-    background: red;
-    transition: height 0.05s;
-  }
+canvas {
+  background: radial-gradient(circle at top, #4caf50, #1b5e20);
+  display: block;
+  margin: auto;
+}
+
+/* Power Bar */
+#powerBarContainer {
+  position: absolute;
+  left: 12px;
+  top: 80px;
+  width: 18px;
+  height: 180px;
+  background: rgba(255,255,255,0.2);
+  border: 2px solid white;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+#powerBarFill {
+  width: 100%;
+  height: 0%;
+  background: linear-gradient(to top, #ff0000, #ffeb3b);
+}
 </style>
+</head>
 
-<div id="powerBarContainer">
-  <div id="powerBarFill"></div>
+<body>
+<div id="gameWrap">
+  <div id="powerBarContainer">
+    <div id="powerBarFill"></div>
+  </div>
+  <canvas id="game"></canvas>
 </div>
-
-<canvas id="game" width="900" height="500"></canvas>
 
 <script>
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
 const powerBarFill = document.getElementById("powerBarFill");
 
-// Game state
-let ball = {x:150, y:400, vx:0, vy:0, r:12};
-let hole = {x:700, y:200, r:20};
+function resize() {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+}
+resize();
+window.addEventListener("resize", resize);
+
+// ---------- GAME STATE ----------
+let ball = { x: 150, y: canvas.height-120, vx: 0, vy: 0, r: 12 };
+let hole = { x: canvas.width-180, y: 180, r: 20 };
 let score = 0;
 let level = 1;
 
 let dragging = false;
 let dragStart = null;
 let dragPos = null;
-let power = 0;
 
-let obstacles = [
-  {x:300, y:150, w:80, h:200},
-  {x:550, y:100, w:60, h:250},
-  {x:420, y:330, w:180, h:40},
-];
+// ---------- OBSTACLES ----------
+let obstacles = [];
 
 function randomObstacles() {
   obstacles = [];
-  for (let i = 0; i < 3; i++) {
+  for (let i = 0; i < 3 + level; i++) {
     obstacles.push({
-      x: Math.random()*600 + 150,
-      y: Math.random()*300 + 80,
-      w: Math.random()*100 + 50,
-      h: Math.random()*80 + 30
+      x: Math.random()*(canvas.width-300)+150,
+      y: Math.random()*(canvas.height-300)+120,
+      w: Math.random()*100+60,
+      h: Math.random()*60+40
     });
   }
 }
+randomObstacles();
 
-// Touch + Mouse
-function getPos(evt) {
-  if (evt.touches) {
+// ---------- INPUT ----------
+function getPos(e) {
+  if (e.touches) {
     return {
-      x: evt.touches[0].clientX - canvas.offsetLeft,
-      y: evt.touches[0].clientY - canvas.offsetTop
+      x: e.touches[0].clientX,
+      y: e.touches[0].clientY
     };
   }
-  return {x: evt.offsetX, y: evt.offsetY};
+  return { x: e.clientX, y: e.clientY };
 }
 
-canvas.addEventListener("mousedown", e => {
+canvas.addEventListener("pointerdown", e => {
   dragging = true;
   dragStart = getPos(e);
   dragPos = dragStart;
 });
 
-canvas.addEventListener("mousemove", e => {
-  if (dragging) {
-    dragPos = getPos(e);
-    let dx = dragStart.x - dragPos.x;
-    let dy = dragStart.y - dragPos.y;
-    power = Math.min(100, Math.sqrt(dx*dx + dy*dy));
-    powerBarFill.style.height = power + "%";
-  }
+canvas.addEventListener("pointermove", e => {
+  if (!dragging) return;
+  dragPos = getPos(e);
+  let dx = dragStart.x - dragPos.x;
+  let dy = dragStart.y - dragPos.y;
+  let power = Math.min(100, Math.hypot(dx, dy));
+  powerBarFill.style.height = power + "%";
 });
 
-canvas.addEventListener("mouseup", e => {
+canvas.addEventListener("pointerup", e => {
   if (!dragging) return;
   let pos = getPos(e);
-
   let dx = dragStart.x - pos.x;
   let dy = dragStart.y - pos.y;
-
-  ball.vx = dx * 0.2;
-  ball.vy = dy * 0.2;
-
-  powerBarFill.style.height = "0%";
-
+  ball.vx = dx * 0.15;
+  ball.vy = dy * 0.15;
   dragging = false;
-  dragPos = null;
-});
-
-// Touch events
-canvas.addEventListener("touchstart", e => {
-  dragging = true;
-  dragStart = getPos(e);
-  dragPos = dragStart;
-});
-
-canvas.addEventListener("touchmove", e => {
-  if (dragging) {
-    dragPos = getPos(e);
-    let dx = dragStart.x - dragPos.x;
-    let dy = dragStart.y - dragPos.y;
-    power = Math.min(100, Math.sqrt(dx*dx + dy*dy));
-    powerBarFill.style.height = power + "%";
-  }
-});
-
-canvas.addEventListener("touchend", e => {
-  dragging = false;
-  dragPos = null;
   powerBarFill.style.height = "0%";
 });
 
-// Physics loop
+// ---------- PHYSICS ----------
+function circleRectCollision(ball, rect) {
+  let cx = Math.max(rect.x, Math.min(ball.x, rect.x+rect.w));
+  let cy = Math.max(rect.y, Math.min(ball.y, rect.y+rect.h));
+  let dx = ball.x - cx;
+  let dy = ball.y - cy;
+  return dx*dx + dy*dy < ball.r*ball.r;
+}
+
+// ---------- LOOP ----------
 function loop() {
-  ctx.clearRect(0,0,900,500);
+  ctx.clearRect(0,0,canvas.width,canvas.height);
 
+  // Move
   ball.x += ball.vx;
   ball.y += ball.vy;
+  ball.vx *= 0.985;
+  ball.vy *= 0.985;
 
-  ball.vx *= 0.97;
-  ball.vy *= 0.97;
-
-  // 改良碰撞邏輯：避免卡牆
-  if (ball.x < ball.r) { ball.x = ball.r; ball.vx *= -0.6; }
-  if (ball.x > 900 - ball.r) { ball.x = 900 - ball.r; ball.vx *= -0.6; }
-  if (ball.y < ball.r) { ball.y = ball.r; ball.vy *= -0.6; }
-  if (ball.y > 500 - ball.r) { ball.y = 500 - ball.r; ball.vy *= -0.6; }
+  // Wall bounce
+  if (ball.x < ball.r) { ball.x = ball.r; ball.vx *= -0.8; }
+  if (ball.x > canvas.width-ball.r) { ball.x = canvas.width-ball.r; ball.vx *= -0.8; }
+  if (ball.y < ball.r) { ball.y = ball.r; ball.vy *= -0.8; }
+  if (ball.y > canvas.height-ball.r) { ball.y = canvas.height-ball.r; ball.vy *= -0.8; }
 
   // Obstacles
   obstacles.forEach(o => {
-    if (ball.x > o.x && ball.x < o.x+o.w &&
-        ball.y > o.y && ball.y < o.y+o.h) {
-
-      let left = Math.abs(ball.x - o.x);
-      let right = Math.abs(ball.x - (o.x+o.w));
-      let top = Math.abs(ball.y - o.y);
-      let bottom = Math.abs(ball.y - (o.y+o.h));
-      let m = Math.min(left,right,top,bottom);
-
-      if (m === left) { ball.x = o.x - ball.r; ball.vx *= -0.6; }
-      else if (m === right) { ball.x = o.x+o.w + ball.r; ball.vx *= -0.6; }
-      else if (m === top) { ball.y = o.y - ball.r; ball.vy *= -0.6; }
-      else { ball.y = o.y + o.h + ball.r; ball.vy *= -0.6; }
+    if (circleRectCollision(ball,o)) {
+      let dx = ball.x - (o.x+o.w/2);
+      let dy = ball.y - (o.y+o.h/2);
+      if (Math.abs(dx) > Math.abs(dy)) ball.vx *= -0.9;
+      else ball.vy *= -0.9;
     }
   });
 
-  // Hole detection
-  let dx = ball.x - hole.x;
-  let dy = ball.y - hole.y;
-  if (Math.sqrt(dx*dx + dy*dy) < hole.r) {
+  // Hole
+  let hx = ball.x-hole.x;
+  let hy = ball.y-hole.y;
+  if (Math.hypot(hx,hy) < hole.r) {
     score += 100;
-    level += 1;
+    level++;
     ball.x = 150;
-    ball.y = 400;
+    ball.y = canvas.height-120;
     ball.vx = ball.vy = 0;
-    hole.x = Math.random()*600 + 200;
-    hole.y = Math.random()*350 + 80;
+    hole.x = Math.random()*(canvas.width-200)+150;
+    hole.y = Math.random()*(canvas.height-200)+100;
     randomObstacles();
   }
 
-  // Draw hole with slight 3D effect
-  let gradientHole = ctx.createRadialGradient(hole.x-5,hole.y-5,2,hole.x,hole.y,hole.r);
-  gradientHole.addColorStop(0,"#555");
-  gradientHole.addColorStop(1,"#222");
-  ctx.fillStyle = gradientHole;
+  // Hole (3D)
+  ctx.fillStyle = "#000";
   ctx.beginPath();
   ctx.arc(hole.x, hole.y, hole.r, 0, Math.PI*2);
   ctx.fill();
 
-  // Draw obstacles with shading
+  // Obstacles (3D)
   obstacles.forEach(o => {
-    let grad = ctx.createLinearGradient(o.x,o.y,o.x+o.w,o.y+o.h);
-    grad.addColorStop(0,"#6b3f08");
-    grad.addColorStop(1,"#4b2e05");
-    ctx.fillStyle = grad;
+    ctx.fillStyle = "#5d4037";
     ctx.fillRect(o.x, o.y, o.w, o.h);
+    ctx.fillStyle = "rgba(0,0,0,0.25)";
+    ctx.fillRect(o.x+4, o.y+4, o.w, o.h);
   });
 
-  // Draw direction line
+  // Aim line
   if (dragging && dragPos) {
-    ctx.strokeStyle = "yellow";
+    ctx.setLineDash([8,6]);
+    ctx.strokeStyle = "#ffeb3b";
     ctx.lineWidth = 3;
     ctx.beginPath();
     ctx.moveTo(ball.x, ball.y);
     ctx.lineTo(dragPos.x, dragPos.y);
     ctx.stroke();
+    ctx.setLineDash([]);
   }
 
-  // Draw ball with shading
-  let gradientBall = ctx.createRadialGradient(ball.x-3, ball.y-3, 2, ball.x, ball.y, ball.r);
-  gradientBall.addColorStop(0,"#fff");
-  gradientBall.addColorStop(1,"#ccc");
-  ctx.fillStyle = gradientBall;
+  // Ball (3D)
+  let g = ctx.createRadialGradient(ball.x-4, ball.y-4, 2, ball.x, ball.y, ball.r);
+  g.addColorStop(0,"#fff");
+  g.addColorStop(1,"#ccc");
+  ctx.fillStyle = g;
   ctx.beginPath();
   ctx.arc(ball.x, ball.y, ball.r, 0, Math.PI*2);
   ctx.fill();
 
   // HUD
   ctx.fillStyle = "white";
-  ctx.font = "22px Arial";
-  ctx.fillText("Level: " + level, 10, 25);
-  ctx.fillText("Score: " + score, 10, 55);
+  ctx.font = "20px Arial";
+  ctx.fillText("Level: "+level, 12, 28);
+  ctx.fillText("Score: "+score, 12, 54);
 
   requestAnimationFrame(loop);
 }
 
 loop();
 </script>
+</body>
+</html>
 """
 
-components.html(html_code, height=520, width=920)
+components.html(html_code, height=900)
